@@ -40,7 +40,11 @@ class LivemasterParser
     */
     public function getProductsUrlsByCategoryAndPageNumber($categoryUrl, $pageNumber)
     {
-    
+        $productsPageHtml = $this->getHtml($categoryUrl);
+
+        $productsUrls = $this->parseProductsUrls($productsPageHtml);
+
+        return $productsUrls;
     }
 
 
@@ -129,12 +133,12 @@ class LivemasterParser
         $html = str_get_html($html);
 
         $productInfo["name"] = $html->find("h1.item-page-item-name span", 0)->innertext;
-        $productInfo["price"] = $html->find("h1.item-page-item-price span span", 0)->innertext;
-        $productInfo["price"] = $html->find("h1.item-page-item-price span span", 0)->innertext;
+        $productInfo["price"] = strip_tags($html->find("div.item-page-item-price span span", 0)->innertext);
         $productInfo["mainPhotoUrl"] = $html->find("#item-page-main-photo-img", 0)->src;
 
 
-        
+        $productInfo["description"] = trim(strip_tags($html->find(".container-main div.item-page-desc-block", 0)->innertext));
+
         return $productInfo;
     }
 
@@ -143,6 +147,15 @@ class LivemasterParser
      */
     private function parseProductsUrls($html)
     {
-        
+        $productsUrlsList = array();
+
+        $html = str_get_html($html);
+
+        foreach($html->find("#objects .grid-item .title a") as $singleProductLink)
+        {
+            $productsUrlsList[] = $singleProductLink->href;
+        }
+
+        return $productsUrlsList;
     }
 }
