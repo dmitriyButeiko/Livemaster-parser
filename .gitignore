@@ -1,0 +1,5 @@
+#ignore Uml diagrams
+/Design
+
+#ignore Test files 
+LivemasterParserTest.php
