@@ -40,14 +40,12 @@ class LivemasterParser
     */
     public function getProductsUrlsByCategoryAndPageNumber($categoryUrl, $pageNumber)
     {
-        $productsPageHtml = $this->getHtml($categoryUrl);
+        $productsPageHtml = $this->getHtml($this->siteUrl . $categoryUrl);
 
         $productsUrls = $this->parseProductsUrls($productsPageHtml);
 
         return $productsUrls;
     }
-
-
 
     /*
     *
@@ -64,14 +62,13 @@ class LivemasterParser
         return $numberOfPages;
     }
 
-
     /*
     *
     */
     public function getProductInfoByProductUrl($productUrl)
     {
 
-        $productHtml = $this->getHtml($productUrl);
+        $productHtml = $this->getHtml($this->siteUrl . $productUrl);
         $productInfo = $this->parseProductInfo($productHtml);
 
         return $productInfo;
@@ -87,6 +84,20 @@ class LivemasterParser
         $categoriesList = $this->parseCategoriesList($mainPageHtml);
 
         return $categoriesList;
+    }
+
+    /*
+    *
+    */
+    private function getHtml($url)
+    {
+        $ch = curl_init($url);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $html = curl_exec($ch);
+        return $html;
     }
 
     /**
@@ -108,20 +119,6 @@ class LivemasterParser
         }
 
         return $categoriesList;
-    }
-
-    /*
-    *
-    */
-    private function getHtml($url)
-    {
-        $ch = curl_init($url);
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-        $html = curl_exec($ch);
-        return $html;
     }
 
     /**
