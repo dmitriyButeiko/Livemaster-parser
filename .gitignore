@@ -3,3 +3,6 @@
 
 #ignore Test files 
 LivemasterParserTest.php
+
+#ignore images files
+/images

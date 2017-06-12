@@ -32,9 +32,11 @@ class LivemasterParser
 
         foreach($htmlArray as $singleHtmlFile)
         {
+            $csvHelper = new CsvHelper();
             $productsUrls = $this->parseProductsUrls($singleHtmlFile["html"]);
 
             $amountOfElements = count($productsUrls);
+            $partOfProductsArray = array();
 
             // делит массив url на части в соотвествии с количеством потоков установленных пользователем
             for ($i = 0; $i < $amountOfElements; $i = $i + $numberOfThreads) {
@@ -50,8 +52,12 @@ class LivemasterParser
 
                 foreach($htmlProductsArray as $singleProductHtml)
                 {
-                    
+                    $partOfProductsArray[] = $this->parseProductInfo($singleProductHtml["html"]);
                 }
+
+                var_dump($partOfProductsArray);
+
+                $csvHelper->generateProductsCsvFile($partOfProductsArray);
             }
         }
     }
@@ -68,7 +74,6 @@ class LivemasterParser
     public function getProductsUrlsByCategoryAndPageNumber($categoryUrl, $pageNumber)
     {
         $productsPageHtml = $this->getHtml($this->siteUrl . $categoryUrl);
-
         $productsUrls = $this->parseProductsUrls($productsPageHtml);
 
         return $productsUrls;
@@ -80,9 +85,16 @@ class LivemasterParser
 
         $html = str_get_html($categoryHtml);
         $numberOfPages = $html->find('#ajax-content form[method="post"] ', 1)->innertext;
-        //var_dump($numberOfPages);
 
         return $numberOfPages;
+    }
+
+    public function getSubcategoriesByCategoryUrl($categoryUrl)
+    {
+        $categoryHtml = $this->getHtml($categoryUrl);
+        $subcategoriesList = $this->parseSubcategoriesList($categoryHtml);
+
+        return $subcategoriesList;
     }
 
     public function getProductInfoByProductUrl($productUrl)
@@ -94,18 +106,12 @@ class LivemasterParser
         return $productInfo;
     }
 
-    public function getCategoriesList()
+    public function getMainCategoriesList()
     {
         $mainPageHtml = $this->getHtml($this->siteUrl);
-
-        $categoriesList = $this->parseCategoriesList($mainPageHtml);
+        $categoriesList = $this->parseMainCategoriesList($mainPageHtml);
 
         return $categoriesList;
-    }
-
-    private function __construct()
-    {
-
     }
 
     public function generateProductsCategoryUrlByPageNumber($categoryUrl, $pageNumber)
@@ -119,6 +125,11 @@ class LivemasterParser
         return $categoryUrl;
     }
 
+    private function __construct()
+    {
+
+    }
+
     private function getHtml($url)
     {
         $ch = curl_init($url);
@@ -130,7 +141,7 @@ class LivemasterParser
         return $html;
     }
 
-    private function parseCategoriesList($html)
+    private function parseMainCategoriesList($html)
     {
         $categoriesList = array();
         $html = str_get_html($html);
@@ -148,6 +159,12 @@ class LivemasterParser
         return $categoriesList;
     }
 
+
+    private function parseSubcategoriesList()
+    {
+        
+    }
+
     private function decodeTextInGoodForm($text)
     {
         $text = strip_tags($text);
@@ -162,7 +179,6 @@ class LivemasterParser
         $text  = trim(preg_replace('/\s\s+/', ' ',  $text));
         return $text;
     }
-
 
     private function parseProductInfo($html)
     {
