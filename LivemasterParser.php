@@ -15,13 +15,45 @@ class LivemasterParser
      */
     private $simpleHtmlDom;
 
-    /**
-     *
-     */
-    private function __construct()
+
+
+    public function loadProducts($productsData)
     {
+        $fromPage = $productsData["fromPage"];
+        $toPage = $productsData["toPage"];
+        $categoryUrl = $productsData["categoryUrl"];
+
+        $categoriesPagesUrls = array();
+
+        for($i = $fromPage; $i < $toPage; $i++)
+        {
+            $categoriesPagesUrls[] = $this->generateProductsCategoryUrlByPageNumber($categoryUrl, $i);
+        }
+
+        $curlDescriptors = $this->getCurlDescriptors(count($categoriesPagesUrls), $categoriesPagesUrls);
+        $curlMulti = $this->createCurlMulti($curlDescriptors);
+        $htmlArray = $this->executeCurlMultiAndGetHtmlArray($curlMulti, $curlDescriptors);
+
+        foreach($htmlArray as $singleHtmlFile)
+        {
+            $productsUrls = $this->parseProductsUrls($singleHtmlFile["html"]);
+
+            $curlDescriptorsProducts = $this->getCurlDescriptors(count($productsUrls), $productsUrls);
+            $curlMultiProducts = $this->createCurlMulti($curlDescriptorsProducts);
+            $htmlProductsArray = $this->executeCurlMultiAndGetHtmlArray($curlMultiProducts, $curlDescriptorsProducts);
+
+           // var_dump($htmlProductsArray);
+            //echo count($htmlProductsArray) . "\n";
+            foreach($htmlProductsArray as $singleProductHtml)
+            {
+                echo strlen($singleProductHtml["html"]) . "\n";
+            }
+            exit;
+        }
 
     }
+
+
 
     /**
      *
@@ -34,7 +66,6 @@ class LivemasterParser
         }
         return $inst;
     }
-
     /*
     *
     */
@@ -50,7 +81,6 @@ class LivemasterParser
     /*
     *
     */
-
     public function getNumberOfProductPagesByCategoryUrl($categoryUrl)
     {
         $categoryHtml = $this->getHtml($this->siteUrl . $categoryUrl);
@@ -84,6 +114,28 @@ class LivemasterParser
         $categoriesList = $this->parseCategoriesList($mainPageHtml);
 
         return $categoriesList;
+    }
+
+    /**
+     *
+     */
+    private function __construct()
+    {
+
+    }
+
+    /*
+    *
+    */
+    public function generateProductsCategoryUrlByPageNumber($categoryUrl, $pageNumber)
+    {
+        if($pageNumber != 1)
+        {
+            $from = ($pageNumber - 1) * 40;
+            $categoryUrl .= "?from=" . $from;
+        }
+
+        return $categoryUrl;
     }
 
     /*
@@ -150,9 +202,101 @@ class LivemasterParser
 
         foreach($html->find("#objects .grid-item .title a") as $singleProductLink)
         {
-            $productsUrlsList[] = $singleProductLink->href;
+            $productsUrlsList[] = $this->siteUrl . $singleProductLink->href;
         }
 
         return $productsUrlsList;
+    }
+
+    /*
+    *
+    */
+    private function getCurlDescriptor($url)
+    {
+        $ch = curl_init($url);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        return $ch;
+    }
+
+    /*
+    *
+    */
+    private function createCurlMulti($descriptors)
+    {
+        $mh = curl_multi_init();
+
+        foreach ($descriptors as $singleDescriptor) {
+            curl_multi_add_handle($mh, $singleDescriptor);
+        }
+
+        return $mh;
+    }
+
+    /*
+    *
+    */
+    private function getCurlDescriptors($amount, $urls)
+    {
+        $curlDescriptors = array();
+
+        for ($i = 0; $i < $amount; $i++) {
+            $curlDescriptors[$i] = $this->getCurlDescriptor($urls[$i]);
+        }
+
+        return $curlDescriptors;
+    }
+
+    /*
+    *
+    */
+    private function executeCurlMultiAndGetHtmlArray($mh, $curlArr)
+    {
+        $htmlArray = array();
+      
+        //запускаем дескрипторы
+        do {
+            curl_multi_exec($mh, $running);
+        } while($running > 0);
+
+        $counter = 0;    
+        $node_count = count($curlArr);
+           
+        for($i = 0; $i < $node_count; $i++)
+        {
+            $htmlArray[$counter]         = array();
+           // $htmlArray[$counter]["url"]  = curl_getinfo($curlArr[$i], CURLINFO_EFFECTIVE_URL);
+            $htmlArray[$counter]["html"] = curl_multi_getcontent( $curlArr[$i]  );
+            $counter++;
+            curl_close($curlArr[$i]);
+        }
+        curl_multi_close($mh);
+
+        return $htmlArray;
+    }
+    private function loadImageFromUrl($url)
+    {
+        $type = pathinfo($url, PATHINFO_EXTENSION);
+        $fileName = $this->generateRandomString . "." . $type;
+
+        $content = file_get_contents($url);
+    }
+
+
+    /*
+    *
+    */
+    function generateRandomString($length = 10) 
+    {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $charactersLength = strlen($characters);
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[rand(0, $charactersLength - 1)];
+        }
+
+        return $randomString;
     }
 }
