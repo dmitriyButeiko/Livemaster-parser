@@ -4,18 +4,8 @@ require_once "includes/simpleHtmlDom.php";
 
 class LivemasterParser
 {
-
-    /**
-     * @var void
-     */
     private $siteUrl = "https://www.livemaster.ru/";
-
-    /**
-     * @var void
-     */
-    private $simpleHtmlDom;
-
-
+    private $imagesPath = "images/";
 
     public function loadProducts($productsData)
     {
@@ -53,11 +43,6 @@ class LivemasterParser
 
     }
 
-
-
-    /**
-     *
-     */
     public function getInstance()
     {
         static $inst = null;
@@ -66,9 +51,7 @@ class LivemasterParser
         }
         return $inst;
     }
-    /*
-    *
-    */
+
     public function getProductsUrlsByCategoryAndPageNumber($categoryUrl, $pageNumber)
     {
         $productsPageHtml = $this->getHtml($this->siteUrl . $categoryUrl);
@@ -78,9 +61,6 @@ class LivemasterParser
         return $productsUrls;
     }
 
-    /*
-    *
-    */
     public function getNumberOfProductPagesByCategoryUrl($categoryUrl)
     {
         $categoryHtml = $this->getHtml($this->siteUrl . $categoryUrl);
@@ -92,9 +72,6 @@ class LivemasterParser
         return $numberOfPages;
     }
 
-    /*
-    *
-    */
     public function getProductInfoByProductUrl($productUrl)
     {
 
@@ -104,9 +81,6 @@ class LivemasterParser
         return $productInfo;
     }
 
-    /**
-     *
-     */
     public function getCategoriesList()
     {
         $mainPageHtml = $this->getHtml($this->siteUrl);
@@ -116,17 +90,11 @@ class LivemasterParser
         return $categoriesList;
     }
 
-    /**
-     *
-     */
     private function __construct()
     {
 
     }
 
-    /*
-    *
-    */
     public function generateProductsCategoryUrlByPageNumber($categoryUrl, $pageNumber)
     {
         if($pageNumber != 1)
@@ -138,9 +106,6 @@ class LivemasterParser
         return $categoryUrl;
     }
 
-    /*
-    *
-    */
     private function getHtml($url)
     {
         $ch = curl_init($url);
@@ -152,9 +117,6 @@ class LivemasterParser
         return $html;
     }
 
-    /**
-     * @param void $html
-     */
     private function parseCategoriesList($html)
     {
         $categoriesList = array();
@@ -173,9 +135,6 @@ class LivemasterParser
         return $categoriesList;
     }
 
-    /**
-     * @param void $html
-     */
     private function parseProductInfo($html)
     {
         $productInfo = array();
@@ -191,9 +150,6 @@ class LivemasterParser
         return $productInfo;
     }
 
-    /**
-     * @param void $html
-     */
     private function parseProductsUrls($html)
     {
         $productsUrlsList = array();
@@ -208,9 +164,6 @@ class LivemasterParser
         return $productsUrlsList;
     }
 
-    /*
-    *
-    */
     private function getCurlDescriptor($url)
     {
         $ch = curl_init($url);
@@ -221,9 +174,6 @@ class LivemasterParser
         return $ch;
     }
 
-    /*
-    *
-    */
     private function createCurlMulti($descriptors)
     {
         $mh = curl_multi_init();
@@ -235,9 +185,6 @@ class LivemasterParser
         return $mh;
     }
 
-    /*
-    *
-    */
     private function getCurlDescriptors($amount, $urls)
     {
         $curlDescriptors = array();
@@ -249,9 +196,6 @@ class LivemasterParser
         return $curlDescriptors;
     }
 
-    /*
-    *
-    */
     private function executeCurlMultiAndGetHtmlArray($mh, $curlArr)
     {
         $htmlArray = array();
@@ -276,18 +220,25 @@ class LivemasterParser
 
         return $htmlArray;
     }
-    private function loadImageFromUrl($url)
+    private function loadImageFromUrl($imageUrlToLoad)
     {
-        $type = pathinfo($url, PATHINFO_EXTENSION);
-        $fileName = $this->generateRandomString . "." . $type;
+        $loadedFileType = pathinfo($imageUrlToLoad, PATHINFO_EXTENSION);
+        $loadedFileName = $this->generateRandomString(10) . "." . $loadedFileType;
+        $loadedImageBinaryData = file_get_contents($imageUrlToLoad);
 
-        $content = file_get_contents($url);
+        $fullLoadedFileName = $this->imagesPath . $loadedFileName;
+
+        if(!file_exists($fullLoadedFileName))
+        {
+            file_put_contents($fullLoadedFileName, $loadedImageBinaryData);
+            return $fullLoadedFileName;
+        }
+        else
+        {
+            return loadImageFromUrl($imageUrlToLoad);
+        }
     }
 
-
-    /*
-    *
-    */
     function generateRandomString($length = 10) 
     {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
