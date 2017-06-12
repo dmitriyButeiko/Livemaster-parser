@@ -3,57 +3,70 @@
 
     class CsvHelper
     {
-    	public function generateCategoriesCsvFile($categoriesList, $fileName = "categories.csv")
+        private $categoriesFileName = "categories.csv";
+        private $productsFileName = "products.csv";
+
+
+    	public function generateCategoriesCsvFile($categoriesList)
     	{
-    		$list = $this->generateListArrayFromCategoriesList($categoriesList);
-            $fp = fopen($fileName, 'w');
+    		$list = $this->generateListArray($categoriesList);
 
-            foreach ($list as $line) {
-   		        fputcsv($fp, $line);
-            }
+            $fp = fopen($this->categoriesFileName, 'w');
 
-            fclose($fp);
+            $this->addData($fp, $list);
 
             return $list;
     	}
 
-    	public function generateProductsCsvFile($cproductsList, $fileName = "products.csv")
-    	{
-    		$list = $this->generateListArrayFromProductsList($categoriesList);
-            $fp = fopen($fileName, 'w');
+        public function generateProductsCsvFile($productsList)
+        {
+            $list = $this->generateListArray($productsList);
 
+
+            $fp = fopen($this->productsFileName, 'a+');
+
+            $this->addData($fp, $list);
+
+            return $list;
+        }
+
+
+        private function addData($fileDescr, $list)
+        {
             foreach ($list as $line) {
-   		        fputcsv($fp, $line);
+                fputcsv($fileDescr, $line);
             }
 
-            fclose($fp);
-    	}
+            fclose($fileDescr);
+        }
 
+        public function addProductsToCsvFile($productsList)
+        {
+            $list = $this->generateListArrayFromProductsList($categoriesList);
+            $fp = fopen($this->productsFileName, 'a+');
+            $this->addData($fp, $list);
+        }
 
-
-
-
-    	private function generateListArrayFromCategoriesList($categoriesList)
+    	private function generateListArray($categoriesList)
     	{
     		$list = array();
     		$categoryIdCounter = 100;
     		$arrayCounter = 0;
     		foreach($categoriesList as $singleCategory)
     		{
-    			$list[$arrayCounter] = array();
-    			$list[$arrayCounter][] = $singleCategory["categoryName"];
-    			$list[$arrayCounter][] = $categoryIdCounter;
+                $list[$arrayCounter] = array();
+
+                foreach($singleCategory as $key => $value)
+                {
+                    $list[$arrayCounter][] = $value;
+                }
+                $list[$arrayCounter][] = $categoryIdCounter;
 
     			$categoryIdCounter++;
     			$arrayCounter++;
     		}
 
     		return $list;
-    	}
-
-    	private function generateListArrayFromProductsList($categoriesList)
-    	{
-
     	}
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+require_once "CsvHelper.php";
 require_once "includes/simpleHtmlDom.php";
 
 class LivemasterParser
@@ -7,11 +8,16 @@ class LivemasterParser
     private $siteUrl = "https://www.livemaster.ru/";
     private $imagesPath = "images/";
 
-    public function loadProducts($productsData)
+    public function loadProducts($productsData, $numberOfThreads = 10)
     {
         $fromPage = $productsData["fromPage"];
         $toPage = $productsData["toPage"];
         $categoryUrl = $productsData["categoryUrl"];
+
+        if(strpos($categoryUrl, "https://") == false)
+        {
+            $categoryUrl = $this->siteUrl . $categoryUrl;
+        }
 
         $categoriesPagesUrls = array();
 
@@ -28,19 +34,26 @@ class LivemasterParser
         {
             $productsUrls = $this->parseProductsUrls($singleHtmlFile["html"]);
 
-            $curlDescriptorsProducts = $this->getCurlDescriptors(count($productsUrls), $productsUrls);
-            $curlMultiProducts = $this->createCurlMulti($curlDescriptorsProducts);
-            $htmlProductsArray = $this->executeCurlMultiAndGetHtmlArray($curlMultiProducts, $curlDescriptorsProducts);
+            $amountOfElements = count($productsUrls);
 
-           // var_dump($htmlProductsArray);
-            //echo count($htmlProductsArray) . "\n";
-            foreach($htmlProductsArray as $singleProductHtml)
-            {
-                echo strlen($singleProductHtml["html"]) . "\n";
+            // делит массив url на части в соотвествии с количеством потоков установленных пользователем
+            for ($i = 0; $i < $amountOfElements; $i = $i + $numberOfThreads) {
+                $urlsList = array();
+                for ($j = $i; $j < $i + $numberOfThreads; $j++) {
+                    if (isset($productsUrls[$j]) && !(is_null($productsUrls[$j]))) {
+                        $urlsList[] = $productsUrls[$j];
+                    }
+                }
+                $curlDescriptorsProducts = $this->getCurlDescriptors(count($urlsList), $urlsList);
+                $curlMultiProducts = $this->createCurlMulti($curlDescriptorsProducts);
+                $htmlProductsArray = $this->executeCurlMultiAndGetHtmlArray($curlMultiProducts, $curlDescriptorsProducts);
+
+                foreach($htmlProductsArray as $singleProductHtml)
+                {
+                    
+                }
             }
-            exit;
         }
-
     }
 
     public function getInstance()
@@ -67,7 +80,7 @@ class LivemasterParser
 
         $html = str_get_html($categoryHtml);
         $numberOfPages = $html->find('#ajax-content form[method="post"] ', 1)->innertext;
-        var_dump($numberOfPages);
+        //var_dump($numberOfPages);
 
         return $numberOfPages;
     }
@@ -135,17 +148,37 @@ class LivemasterParser
         return $categoriesList;
     }
 
+    private function decodeTextInGoodForm($text)
+    {
+        $text = strip_tags($text);
+        $text = html_entity_decode($text);
+        $text = trim($text);
+        $text = preg_replace( "/\r|\n/", "", $text);
+        $text = str_replace("   ", "", $text);
+        $text = str_replace("\"", "'", $text);
+
+        $text = preg_replace('/\s\s+/', ' ',  $text);
+
+        $text  = trim(preg_replace('/\s\s+/', ' ',  $text));
+        return $text;
+    }
+
+
     private function parseProductInfo($html)
     {
         $productInfo = array();
         $html = str_get_html($html);
 
-        $productInfo["name"] = $html->find("h1.item-page-item-name span", 0)->innertext;
-        $productInfo["price"] = strip_tags($html->find("div.item-page-item-price span span", 0)->innertext);
-        $productInfo["mainPhotoUrl"] = $html->find("#item-page-main-photo-img", 0)->src;
+        $productInfo["name"] = $this->decodeTextInGoodForm($html->find("h1.item-page-item-name span", 0)->innertext);
+        $productInfo["price"] = $this->decodeTextInGoodForm($html->find("div.item-page-item-price span span", 0)->innertext);
 
+        $mainPhotoUrl = $this->decodeTextInGoodForm($html->find("#item-page-main-photo-img", 0)->src);
 
-        $productInfo["description"] = trim(strip_tags($html->find(".container-main div.item-page-desc-block", 0)->innertext));
+        $photoPath = $this->loadImageFromUrl($mainPhotoUrl);
+
+        $productInfo["photoPath"] = $photoPath;
+
+        $productInfo["description"] = $this->decodeTextInGoodForm($html->find(".container-main div.item-page-desc-block", 0)->innertext);
 
         return $productInfo;
     }
